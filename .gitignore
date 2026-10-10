@@ -1,0 +1,52 @@
+# ==============================================================================
+# DataPulse — Intelligent Data Engineering & Analytics Platform
+# .gitignore
+# ==============================================================================
+
+# Python Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Raw & Processed Data (Keep directory structure with .gitkeep, ignore data files)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Node / React / Frontend (Future Phases)
+node_modules/
+dist/
+build/
+.npm/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini

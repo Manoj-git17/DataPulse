@@ -1,0 +1,7 @@
+# DataPulse — Core Dependencies
+# Phase 2: Data Ingestion & Transformation
+pandas>=2.2.0
+python-dotenv>=1.0.0
+
+# Quality Assurance & Testing
+pytest>=8.0.0
