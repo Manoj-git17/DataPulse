@@ -49,7 +49,7 @@ DataPulse/
 ## 🚀 Development Roadmap
 
 - [x] **Phase 1**: Environment setup and project structure
-- [ ] **Phase 2**: Import and validate sales data using Python & Pandas
+- [x] **Phase 2**: Import and validate sales data using Python & Pandas
 - [ ] **Phase 3**: Clean and transform the data
 - [ ] **Phase 4**: Store the processed data in PostgreSQL
 - [ ] **Phase 5**: Build SQL analytics
