@@ -27,6 +27,9 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
 
 # Node / React / Frontend (Future Phases)
 node_modules/

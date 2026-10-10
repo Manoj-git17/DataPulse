@@ -1,7 +1,9 @@
-# DataPulse — Core Dependencies
 # Phase 2: Data Ingestion & Transformation
 pandas>=2.2.0
 python-dotenv>=1.0.0
+
+# Phase 4: Database Modeling & Storage
+sqlalchemy>=2.0.0
 
 # Quality Assurance & Testing
 pytest>=8.0.0
