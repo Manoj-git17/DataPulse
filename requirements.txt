@@ -5,5 +5,10 @@ python-dotenv>=1.0.0
 # Phase 4: Database Modeling & Storage
 sqlalchemy>=2.0.0
 
+# Phase 7: Backend API Layer
+fastapi>=0.110.0
+uvicorn>=0.28.0
+httpx>=0.27.0
+
 # Quality Assurance & Testing
 pytest>=8.0.0
