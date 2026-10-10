@@ -53,7 +53,7 @@ DataPulse/
 - [x] **Phase 3**: Clean and transform the data
 - [x] **Phase 4**: Store the processed data in PostgreSQL / Relational DB
 - [x] **Phase 5**: Build SQL analytics
-- [ ] **Phase 6**: Create a dashboard using React
+- [x] **Phase 6**: Create a dashboard using React
 - [ ] **Phase 7**: Connect dashboard to FastAPI backend
 - [ ] **Phase 8**: Testing, documentation, and deployment preparation
 - [ ] **Phase 9**: AI assistant (advanced feature)
