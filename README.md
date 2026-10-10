@@ -50,7 +50,7 @@ DataPulse/
 
 - [x] **Phase 1**: Environment setup and project structure
 - [x] **Phase 2**: Import and validate sales data using Python & Pandas
-- [ ] **Phase 3**: Clean and transform the data
+- [x] **Phase 3**: Clean and transform the data
 - [ ] **Phase 4**: Store the processed data in PostgreSQL
 - [ ] **Phase 5**: Build SQL analytics
 - [ ] **Phase 6**: Create a dashboard using React
