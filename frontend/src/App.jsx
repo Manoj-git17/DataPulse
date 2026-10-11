@@ -57,6 +57,8 @@ const formatINR = (val) => {
   }).format(val || 0);
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function App() {
   const [data, setData] = useState(INITIAL_DATA);
   const [dataSource, setDataSource] = useState('Local Verified Snapshot');
@@ -75,7 +77,7 @@ export default function App() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/dashboard');
+      const response = await fetch(`${API_BASE_URL}/api/dashboard`);
       if (response.ok) {
         const json = await response.json();
         setData(json);
@@ -100,7 +102,7 @@ export default function App() {
 
     setAiLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/ai/ask', {
+      const res = await fetch(`${API_BASE_URL}/api/ai/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q }),
@@ -120,36 +122,48 @@ export default function App() {
 
   // Client-side fallback matching local AI logic when API is offline
   const fallbackClientAI = (query) => {
-    const lower = query.toLowerCase();
-    if (lower.includes('product') || lower.includes('item') || lower.includes('selling')) {
+    const lower = query.toLowerCase().trim();
+    if (['drop', 'delete', 'truncate', 'alter', 'insert', 'update'].some((w) => lower.includes(w))) {
+      setAiResult({
+        answer: "Data modification and destructive operations are not permitted. DataPulse operates strictly in read-only analytical mode.",
+        insights: "The assistant generates and executes read-only SELECT queries.",
+        sql_query: null,
+      });
+    } else if (['product', 'item', 'selling', 'bestseller'].some((w) => lower.includes(w))) {
       setAiResult({
         answer: "The top performing product is 'Ultra-HD 4K Monitor 27-inch' with ₹330,225.00 in delivered revenue across 21 units.",
         insights: "Category 'Electronics' drives the highest revenue share with a 28.5% profit margin.",
         sql_query: "SELECT p.product_name, SUM(s.quantity) AS units, ROUND(SUM(s.net_amount), 2) AS revenue FROM fact_sales s JOIN dim_products p ON s.product_id = p.product_id WHERE s.order_status = 'Delivered' GROUP BY p.product_name ORDER BY revenue DESC LIMIT 3;",
       });
-    } else if (lower.includes('region') || lower.includes('zone') || lower.includes('profitable')) {
+    } else if (['region', 'zone', 'profitable', 'territory', 'geography'].some((w) => lower.includes(w))) {
       setAiResult({
         answer: "The 'South' region leads sales with ₹347,171.40 in net revenue across 35 delivered orders.",
         insights: "Top regional margin is 26.83%, generating ₹93,154.00 in net profit.",
         sql_query: "SELECT c.customer_region, COUNT(s.order_id) AS orders, ROUND(SUM(s.net_amount), 2) AS revenue FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status = 'Delivered' GROUP BY c.customer_region ORDER BY revenue DESC;",
       });
-    } else if (lower.includes('customer') || lower.includes('who') || lower.includes('clv')) {
+    } else if (['customer', 'client', 'buyer', 'clv', 'spender'].some((w) => lower.includes(w))) {
       setAiResult({
-        answer: "Our top customer is Aarav Sharma (North) with total lifetime spend of ₹241,500.00 across 24 orders.",
+        answer: "Our top customer is Vikram Malhotra (North) with total lifetime spend of ₹241,500.00 across 24 orders.",
         insights: "High customer retention: top repeat buyers contribute 40%+ of recurring volume.",
         sql_query: "SELECT c.customer_name, c.customer_region, ROUND(SUM(s.net_amount), 2) AS total_spend FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status != 'Cancelled' GROUP BY c.customer_id ORDER BY total_spend DESC LIMIT 5;",
       });
-    } else if (lower.includes('payment') || lower.includes('upi') || lower.includes('card')) {
+    } else if (['payment', 'upi', 'card', 'cash', 'cod', 'banking'].some((w) => lower.includes(w))) {
       setAiResult({
         answer: "The most preferred payment method is UPI, capturing 28.38% of total transaction volume.",
         insights: "UPI shows the lowest cancellation rate (4.76%) among all payment rails.",
         sql_query: "SELECT payment_method, COUNT(order_id) AS transactions, ROUND((COUNT(order_id)*100.0/(SELECT COUNT(*) FROM fact_sales)), 2) AS share_pct FROM fact_sales GROUP BY payment_method ORDER BY transactions DESC;",
       });
-    } else {
+    } else if (['revenue', 'profit', 'sales', 'kpi', 'performance', 'margin', 'aov', 'earnings'].some((w) => lower.includes(w))) {
       setAiResult({
         answer: "Total net revenue is ₹1,512,963.40 with ₹408,097.30 in total net profit across 148 orders.",
         insights: "Healthy business efficiency: 26.97% overall profit margin and an Average Order Value (AOV) of ₹10,222.73.",
         sql_query: "SELECT COUNT(order_id), ROUND(SUM(net_amount), 2) AS revenue, ROUND(SUM(estimated_profit), 2) AS profit FROM fact_sales;",
+      });
+    } else {
+      setAiResult({
+        answer: `I cannot answer questions about '${query}'. I am an analytical assistant specialized in DataPulse e-commerce data (revenue, profit, products, customers, regions, and payments).`,
+        insights: "Try asking a supported question like: 'What is our total revenue and profit?' or 'Show me the top 3 best selling products'.",
+        sql_query: null,
       });
     }
   };
@@ -244,8 +258,8 @@ export default function App() {
           <div className="kpi-title">Total Net Revenue</div>
           <div className="kpi-value">{formatINR(kpis.total_net_revenue)}</div>
           <div className="kpi-subtext">
-            <span className="kpi-badge badge-green">+18.4%</span>
-            <span>across 148 orders</span>
+            <span className="kpi-badge badge-green">Validated</span>
+            <span>across {kpis.total_orders} orders</span>
           </div>
         </div>
 

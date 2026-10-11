@@ -5,7 +5,7 @@
 [![React](https://img.shields.io/badge/React-19.2-61DAFB.svg)](https://react.dev/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.1-red.svg)](https://www.sqlalchemy.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ready-336791.svg)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-26%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-38%20Passed-brightgreen.svg)]()
 [![Budget](https://img.shields.io/badge/Budget-₹0%20(Open%20Source)-success.svg)]()
 
 > **DataPulse** is an end-to-end, enterprise-grade data engineering, SQL analytics, and full-stack platform built with Python, Pandas, PostgreSQL/SQLite, FastAPI, and React. Built from the ground up at **₹0 cost** using pure open-source technologies.
@@ -99,7 +99,8 @@ DataPulse/
 │   └── vite.config.js
 ├── scripts/                 # Utility scripts
 │   └── run_tests.py         # Unified test runner
-├── tests/                   # Automated Pytest test suite (26 tests)
+├── tests/                   # Automated Pytest test suite (38 tests)
+│   ├── test_ai_assistant.py
 │   ├── test_analytics.py
 │   ├── test_api.py
 │   ├── test_database.py

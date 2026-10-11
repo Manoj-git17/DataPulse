@@ -41,6 +41,13 @@ flowchart TD
         React["React 19 + Vite Dashboard\n(frontend/src/App.jsx)"]
         FastAPI <-->|REST / JSON| React
     end
+
+    subgraph Layer 6: Conversational AI
+        AI["Text-to-SQL Assistant\n(ai/assistant.py)"]
+        React <-->|POST /api/ai/ask| FastAPI
+        FastAPI <--> AI
+        AI <-->|Read-Only Queries| CustDim & ProdDim & SalesFact
+    end
 ```
 
 ---
@@ -78,4 +85,18 @@ flowchart TD
 
 ### Layer 5: Frontend Dashboard (`frontend/`)
 * Built with **React 19** and **Vite**.
-* Zero external bloat: Responsive Glassmorphism UI, interactive SVG charts, dynamic KPI meters, and automatic live API polling with snapshot fallback.
+* Features: Responsive Glassmorphism UI, interactive SVG charts, dynamic KPI meters, and automatic live API polling via configurable `VITE_API_URL` with snapshot fallback.
+
+### Layer 6: Conversational AI Assistant (`ai/assistant.py`)
+* **Architecture**: 100% local, zero-token cost rule-based semantic NLP query router and Text-to-SQL compiler.
+* **Supported Query Handling**: Maps natural-language business questions to parameterized SQL queries across:
+  * Executive KPIs & Revenue (`EXECUTIVE_KPIS`)
+  * Top-selling products and categories (`TOP_PRODUCTS`)
+  * Regional performance & profit margins (`REGIONAL_PERFORMANCE`)
+  * Customer lifetime value & spend rankings (`CUSTOMER_CLV`)
+  * Payment method adoption and cancellation metrics (`PAYMENT_METHOD`)
+  * Monthly trends and cumulative growth curves (`MONTHLY_TRENDS`)
+* **Database Interaction**: Executes strictly read-only `SELECT` queries against the relational Star Schema.
+* **Unsupported & Destructive Query Protection**:
+  * Blocks any queries containing modification keywords (`DROP`, `DELETE`, `TRUNCATE`, `ALTER`, `UPDATE`, `INSERT`) with an explicit safety notice.
+  * Rejects irrelevant queries (e.g., weather, chit-chat) with an `UNSUPPORTED_QUERY` intent code, returning helpful domain sample questions rather than defaulting to revenue data.

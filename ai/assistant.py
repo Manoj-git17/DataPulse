@@ -9,6 +9,13 @@ import sys
 from typing import Dict, Any, List
 from sqlalchemy import text, Engine
 
+# Ensure UTF-8 output in Windows consoles to prevent cp1252 charmap encoding errors
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # Ensure root directory is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -19,6 +26,7 @@ from db.analytics import (
     get_top_products,
     get_customer_clv,
     get_payment_method_breakdown,
+    get_monthly_trends,
 )
 
 SAMPLE_QUESTIONS = [
@@ -27,7 +35,24 @@ SAMPLE_QUESTIONS = [
     "Which region is the most profitable?",
     "Who are our highest value customers?",
     "What is the most popular payment method?",
-    "What is our average order value?",
+    "What are our monthly revenue trends?",
+]
+
+# Keywords that indicate unsupported or destructive operations
+DESTRUCTIVE_KEYWORDS = {
+    "delete", "drop", "truncate", "alter", "update", "insert",
+    "remove", "destroy", "shutdown", "kill", "purge"
+}
+
+# Domain keyword groups for supported analytical intents
+PRODUCT_KEYWORDS = ["product", "item", "bestseller", "selling", "catalog", "units sold"]
+REGIONAL_KEYWORDS = ["region", "geography", "zone", "territory", "north", "south", "east", "west"]
+CUSTOMER_KEYWORDS = ["customer", "client", "buyer", "clv", "spender", "lifetime value", "highest value"]
+PAYMENT_KEYWORDS = ["payment", "upi", "card", "cod", "cash", "banking", "checkout", "cancellation rate"]
+TREND_KEYWORDS = ["trend", "timeline", "monthly", "cumulative", "growth", "over time"]
+REVENUE_KEYWORDS = [
+    "revenue", "profit", "sales", "kpi", "performance", "aov", "margin", "earnings",
+    "summary", "overview", "business health", "average order", "order value", "basket size", "total order"
 ]
 
 
@@ -41,11 +66,38 @@ class DataPulseAIAssistant:
         self.engine = engine or get_engine()
 
     def ask(self, query: str) -> Dict[str, Any]:
-        """Process a natural language business question and return answers, SQL, and insights."""
+        """
+        Process a natural language business question.
+        Returns validated SQL, answers, and data for supported queries,
+        or an explicit unsupported-intent notice with helpful guidance.
+        """
         cleaned = query.lower().strip()
 
-        # 1. Top Products Query
-        if any(w in cleaned for w in ["product", "item", "selling", "bestseller"]):
+        # 1. Reject empty or whitespace-only queries
+        if not cleaned:
+            return {
+                "question": query,
+                "intent": "UNSUPPORTED_QUERY",
+                "sql_query": None,
+                "answer": "Please ask a question about DataPulse sales, products, revenue, customers, regions, or payments.",
+                "insights": f"Try a sample question such as: '{SAMPLE_QUESTIONS[0]}'",
+                "data": None,
+            }
+
+        # 2. Reject destructive and modification requests (Read-Only Safety)
+        tokens = set(re.findall(r"\w+", cleaned))
+        if tokens & DESTRUCTIVE_KEYWORDS:
+            return {
+                "question": query,
+                "intent": "UNSUPPORTED_QUERY",
+                "sql_query": None,
+                "answer": "Data modification and destructive operations are not permitted. DataPulse operates strictly in read-only analytical mode.",
+                "insights": "The assistant generates and executes read-only SELECT queries.",
+                "data": None,
+            }
+
+        # 3. Top Products Query
+        if any(w in cleaned for w in PRODUCT_KEYWORDS):
             limit = 3 if "3" in cleaned else 5
             data = get_top_products(self.engine, limit=limit)
             top_item = data[0] if data else {}
@@ -61,8 +113,8 @@ class DataPulseAIAssistant:
                 "data": data,
             }
 
-        # 2. Regional Performance Query
-        if any(w in cleaned for w in ["region", "geography", "zone", "state", "territory"]):
+        # 4. Regional Performance Query
+        if any(w in cleaned for w in REGIONAL_KEYWORDS):
             data = get_regional_breakdown(self.engine)
             top_reg = data[0] if data else {}
             sql = """SELECT c.customer_region, COUNT(s.order_id) AS orders, ROUND(SUM(s.net_amount), 2) AS revenue, ROUND(SUM(s.estimated_profit), 2) AS profit FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status = 'Delivered' GROUP BY c.customer_region ORDER BY revenue DESC;"""
@@ -77,8 +129,8 @@ class DataPulseAIAssistant:
                 "data": data,
             }
 
-        # 3. Customer Lifetime Value (CLV)
-        if any(w in cleaned for w in ["customer", "client", "buyer", "clv", "spenders", "who"]):
+        # 5. Customer Lifetime Value (CLV)
+        if any(w in cleaned for w in CUSTOMER_KEYWORDS):
             data = get_customer_clv(self.engine, limit=5)
             top_cust = data[0] if data else {}
             sql = """SELECT c.customer_name, c.customer_region, COUNT(s.order_id) AS orders, ROUND(SUM(s.net_amount), 2) AS total_spend, RANK() OVER (ORDER BY SUM(s.net_amount) DESC) AS rank FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status != 'Cancelled' GROUP BY c.customer_id, c.customer_name ORDER BY total_spend DESC LIMIT 5;"""
@@ -93,8 +145,8 @@ class DataPulseAIAssistant:
                 "data": data,
             }
 
-        # 4. Payment Method Adoption
-        if any(w in cleaned for w in ["payment", "upi", "card", "cod", "cash", "banking"]):
+        # 6. Payment Method Adoption
+        if any(w in cleaned for w in PAYMENT_KEYWORDS):
             data = get_payment_method_breakdown(self.engine)
             top_pm = data[0] if data else {}
             sql = """SELECT payment_method, COUNT(order_id) AS transactions, ROUND(SUM(net_amount), 2) AS revenue, ROUND((COUNT(order_id) * 100.0 / (SELECT COUNT(*) FROM fact_sales)), 2) AS share_pct FROM fact_sales GROUP BY payment_method ORDER BY transactions DESC;"""
@@ -109,28 +161,78 @@ class DataPulseAIAssistant:
                 "data": data,
             }
 
-        # 5. Default / Revenue / KPIs / Executive Summary
-        kpis = get_executive_kpis(self.engine)
-        sql = """SELECT COUNT(order_id) AS total_orders, ROUND(SUM(net_amount), 2) AS total_revenue, ROUND(SUM(estimated_profit), 2) AS total_profit, ROUND(AVG(net_amount), 2) AS aov, ROUND((SUM(estimated_profit)/SUM(net_amount))*100, 2) AS margin_pct FROM fact_sales;"""
-        answer = f"Total net revenue is ₹{kpis.get('total_net_revenue', 0):,.2f} with total profit of ₹{kpis.get('total_profit', 0):,.2f} across {kpis.get('total_orders')} orders."
-        insights = f"Healthy business health: 26.97% overall profit margin and an Average Order Value (AOV) of ₹{kpis.get('average_order_value', 0):,.2f}."
+        # 7. Monthly Trends & Growth
+        if any(w in cleaned for w in TREND_KEYWORDS):
+            data = get_monthly_trends(self.engine)
+            sql = """SELECT strftime('%Y-%m', order_date) AS month, COUNT(order_id) AS orders, ROUND(SUM(net_amount), 2) AS revenue, ROUND(SUM(SUM(net_amount)) OVER (ORDER BY strftime('%Y-%m', order_date)), 2) AS cumulative_revenue FROM fact_sales WHERE order_status != 'Cancelled' GROUP BY strftime('%Y-%m', order_date) ORDER BY month ASC;"""
+            latest = data[-1] if data else {}
+            answer = f"Tracked {len(data)} calendar months. Cumulative business revenue reached ₹{latest.get('cumulative_revenue', 0):,.2f} by {latest.get('month')}."
+            insights = "Time-series shows consistent monthly transaction activity across all fiscal periods."
+            return {
+                "question": query,
+                "intent": "MONTHLY_TRENDS",
+                "sql_query": sql,
+                "answer": answer,
+                "insights": insights,
+                "data": data,
+            }
 
+        # 8. Legitimate Revenue / KPI / Business Health Query
+        if any(w in cleaned for w in REVENUE_KEYWORDS):
+            kpis = get_executive_kpis(self.engine)
+            sql = """SELECT COUNT(order_id) AS total_orders, ROUND(SUM(net_amount), 2) AS total_revenue, ROUND(SUM(estimated_profit), 2) AS total_profit, ROUND(AVG(net_amount), 2) AS aov, ROUND((SUM(estimated_profit)/SUM(net_amount))*100, 2) AS margin_pct FROM fact_sales;"""
+            answer = f"Total net revenue is ₹{kpis.get('total_net_revenue', 0):,.2f} with total profit of ₹{kpis.get('total_profit', 0):,.2f} across {kpis.get('total_orders')} orders."
+            insights = f"Business health: {kpis.get('overall_profit_margin_pct')}% overall profit margin and an Average Order Value (AOV) of ₹{kpis.get('average_order_value', 0):,.2f}."
+            return {
+                "question": query,
+                "intent": "EXECUTIVE_KPIS",
+                "sql_query": sql,
+                "answer": answer,
+                "insights": insights,
+                "data": kpis,
+            }
+
+        # 9. Explicit Unsupported Query Handling (Guards against arbitrary/unrelated questions)
         return {
             "question": query,
-            "intent": "EXECUTIVE_KPIS",
-            "sql_query": sql,
-            "answer": answer,
-            "insights": insights,
-            "data": kpis,
+            "intent": "UNSUPPORTED_QUERY",
+            "sql_query": None,
+            "answer": (
+                f"I cannot answer questions about '{query}'. "
+                "I am an analytical assistant specialized in DataPulse e-commerce data "
+                "(revenue, profit, products, customers, regions, payment methods, and monthly trends)."
+            ),
+            "insights": (
+                "Try asking one of the supported business questions, such as: "
+                f"'{SAMPLE_QUESTIONS[0]}' or '{SAMPLE_QUESTIONS[1]}'."
+            ),
+            "data": None,
         }
+
+
+def safe_cli_print(text_str: str) -> None:
+    """Print text safely across different Windows terminal encodings without crashing."""
+    try:
+        print(text_str)
+    except UnicodeEncodeError:
+        # Fallback to ASCII representation for terminal encodings that cannot encode ₹
+        safe_str = text_str.replace("₹", "INR ")
+        print(safe_str.encode(sys.stdout.encoding or "ascii", errors="replace").decode(sys.stdout.encoding or "ascii"))
 
 
 if __name__ == "__main__":
     assistant = DataPulseAIAssistant()
-    for q in SAMPLE_QUESTIONS[:3]:
-        print("\n" + "=" * 60)
-        print(f"User: {q}")
+    test_queries = [
+        "What is our total revenue and profit?",
+        "Show me the top 3 best selling products",
+        "What is the weather in Delhi?",
+        "DELETE FROM fact_sales",
+    ]
+    for q in test_queries:
+        safe_cli_print("\n" + "=" * 60)
+        safe_cli_print(f"User Query: {q}")
         res = assistant.ask(q)
-        print(f"Generated SQL: {res['sql_query']}")
-        print(f"AI Answer    : {res['answer']}")
-        print(f"Key Insight  : {res['insights']}")
+        safe_cli_print(f"Intent    : {res['intent']}")
+        safe_cli_print(f"SQL       : {res['sql_query']}")
+        safe_cli_print(f"AI Answer : {res['answer']}")
+        safe_cli_print(f"Insights  : {res['insights']}")
