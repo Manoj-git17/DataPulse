@@ -75,6 +75,135 @@
   border-color: rgba(99, 102, 241, 0.6);
 }
 
+/* AI Assistant Widget */
+.ai-widget {
+  margin-bottom: 28px;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: linear-gradient(180deg, rgba(30, 27, 75, 0.7) 0%, rgba(17, 24, 39, 0.9) 100%);
+  padding: 22px 26px;
+  border-radius: 14px;
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ai-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e9d5ff;
+}
+
+.ai-sparkle {
+  font-size: 18px;
+}
+
+.ai-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ai-input {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #f3f4f6;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ai-input:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.2);
+}
+
+.ai-btn {
+  background: linear-gradient(135deg, #9333ea, #6366f1);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.ai-btn:hover {
+  opacity: 0.9;
+}
+
+.ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ai-chip {
+  background: rgba(147, 51, 234, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #d8b4fe;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ai-chip:hover {
+  background: rgba(147, 51, 234, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #ffffff;
+}
+
+.ai-response-box {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(75, 85, 99, 0.4);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-top: 12px;
+}
+
+.ai-answer-text {
+  font-size: 15px;
+  color: #f3f4f6;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.ai-insight-text {
+  font-size: 13px;
+  color: #34d399;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ai-sql-snippet {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: #020617;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #93c5fd;
+  overflow-x: auto;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
 /* KPI Cards Grid */
 .kpi-grid {
   display: grid;

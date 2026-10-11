@@ -11,6 +11,7 @@ import sys
 from typing import Dict, List, Any
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 # Ensure root directory is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -25,6 +26,7 @@ from db.analytics import (
     get_payment_method_breakdown,
     get_full_analytics_dashboard,
 )
+from ai.assistant import DataPulseAIAssistant, SAMPLE_QUESTIONS
 
 app = FastAPI(
     title="DataPulse Analytics API",
@@ -130,6 +132,26 @@ def get_customers(limit: int = Query(10, ge=1, le=100)) -> List[Dict[str, Any]]:
 def get_payment_methods() -> List[Dict[str, Any]]:
     """Payment method adoption and cancellation metrics."""
     return get_payment_method_breakdown()
+
+
+class AIQueryRequest(BaseModel):
+    question: str
+
+
+@app.get("/api/ai/suggestions", tags=["AI Assistant"])
+def get_ai_suggestions() -> List[str]:
+    """Return pre-built analytical question prompts for the UI."""
+    return SAMPLE_QUESTIONS
+
+
+@app.post("/api/ai/ask", tags=["AI Assistant"])
+def ask_ai_assistant(payload: AIQueryRequest) -> Dict[str, Any]:
+    """
+    Process natural language business queries, generates SQL,
+    and returns conversational analytics answers and key insights.
+    """
+    assistant = DataPulseAIAssistant()
+    return assistant.ask(payload.question)
 
 
 if __name__ == "__main__":
