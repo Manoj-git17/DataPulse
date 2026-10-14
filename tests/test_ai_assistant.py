@@ -106,17 +106,17 @@ def test_ai_empty_query_rejected(assistant):
     assert "please ask a question" in res["answer"].lower()
 
 
-def test_api_ai_suggestions(client):
-    res = client.get("/api/ai/suggestions")
+def test_api_ai_suggestions(client, auth_headers):
+    res = client.get("/api/ai/suggestions", headers=auth_headers)
     assert res.status_code == 200
     suggestions = res.json()
     assert isinstance(suggestions, list)
     assert len(suggestions) > 0
 
 
-def test_api_ai_ask_endpoint(client):
+def test_api_ai_ask_endpoint(client, auth_headers):
     payload = {"question": "What is our total revenue?"}
-    res = client.post("/api/ai/ask", json=payload)
+    res = client.post("/api/ai/ask", json=payload, headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["intent"] == "EXECUTIVE_KPIS"
@@ -125,12 +125,21 @@ def test_api_ai_ask_endpoint(client):
     assert "insights" in data
 
 
-def test_api_ai_ask_unsupported_endpoint(client):
+def test_api_ai_ask_unsupported_endpoint(client, auth_headers):
     payload = {"question": "How to make a chocolate cake?"}
-    res = client.post("/api/ai/ask", json=payload)
+    res = client.post("/api/ai/ask", json=payload, headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["intent"] == "UNSUPPORTED_QUERY"
     assert data["sql_query"] is None
     assert data["data"] is None
     assert "cannot answer" in data["answer"].lower()
+
+
+def test_api_ai_endpoints_require_auth(client):
+    """Verify that unauthenticated requests to AI endpoints return 401."""
+    res_suggestions = client.get("/api/ai/suggestions")
+    assert res_suggestions.status_code == 401
+
+    res_ask = client.post("/api/ai/ask", json={"question": "What is our total revenue?"})
+    assert res_ask.status_code == 401

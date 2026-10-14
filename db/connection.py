@@ -16,6 +16,17 @@ load_dotenv()
 DEFAULT_DB_PATH = Path("data/datapulse.db")
 
 
+def normalize_database_url(url: str) -> str:
+    """
+    Normalize legacy database URL schemes (e.g. postgres:// to postgresql://)
+    as required by SQLAlchemy 1.4+ and 2.0+.
+    Preserves sqlite:/// and already valid postgresql:// URLs.
+    """
+    if url and url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
 def get_database_url() -> str:
     """
     Construct the database connection string.
@@ -25,7 +36,7 @@ def get_database_url() -> str:
     """
     env_url = os.getenv("DATABASE_URL")
     if env_url:
-        return env_url
+        return normalize_database_url(env_url)
 
     # Check if discrete postgres credentials are provided
     db_user = os.getenv("DB_USER")
@@ -46,7 +57,7 @@ def get_engine(database_url: str | None = None) -> Engine:
     """
     Create a SQLAlchemy Engine with optimal pooling settings.
     """
-    url = database_url or get_database_url()
+    url = normalize_database_url(database_url or get_database_url())
 
     # SQLite-specific connection arguments (foreign keys enable)
     if url.startswith("sqlite"):

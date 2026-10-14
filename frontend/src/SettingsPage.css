@@ -1,0 +1,290 @@
+/* SettingsPage — inherits CSS variables from .app-shell */
+
+.settings-page {
+  padding: 32px;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.settings-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #eef2ff;
+}
+
+/* Section */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--dp-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(19, 27, 43, 0.98), rgba(14, 20, 33, 0.98));
+}
+
+.settings-section-title {
+  margin: 0;
+  padding: 16px 22px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--dp-muted);
+  border-bottom: 1px solid var(--dp-border);
+}
+
+/* Row */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--dp-border);
+  transition: background 0.15s ease;
+}
+
+.settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.settings-row-desc {
+  font-size: 12px;
+  color: var(--dp-muted);
+  line-height: 1.5;
+}
+
+.settings-row-desc strong { color: #c7d2fe; }
+
+/* Buttons */
+.settings-btn-toggle {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #c7d2fe;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.settings-btn-toggle:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(129, 140, 248, 0.65);
+  transform: translateY(-1px);
+}
+
+.settings-btn-danger {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #fda4af;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.settings-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(248, 113, 113, 0.6);
+  transform: translateY(-1px);
+}
+
+.settings-status-pill {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Platform info grid */
+.settings-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.settings-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--dp-border);
+  border-right: 1px solid var(--dp-border);
+}
+
+.settings-info-card:nth-child(2n) {
+  border-right: 0;
+}
+
+.settings-info-card:nth-last-child(-n+2) {
+  border-bottom: 0;
+}
+
+.settings-info-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--dp-muted);
+}
+
+.settings-info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════
+   Light theme overrides for SettingsPage
+   ═══════════════════════════════════════════════════ */
+
+.app-shell.theme-light .settings-page-title {
+  color: #0f172a;
+}
+
+.app-shell.theme-light .settings-section {
+  background: #ffffff;
+  border-color: var(--dp-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.app-shell.theme-light .settings-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.app-shell.theme-light .settings-row-label {
+  color: #0f172a;
+}
+
+.app-shell.theme-light .settings-row-desc strong {
+  color: #4f46e5;
+}
+
+.app-shell.theme-light .settings-info-value {
+  color: #0f172a;
+  font-weight: 650;
+}
+
+.app-shell.theme-light .settings-section-title {
+  color: #475569;
+  font-weight: 800;
+  border-bottom-color: rgba(148, 163, 184, 0.28);
+}
+
+.app-shell.theme-light .settings-row-desc {
+  color: #475569;
+  font-weight: 500;
+}
+
+.app-shell.theme-light .settings-info-label {
+  color: #475569;
+  font-weight: 800;
+}
+
+.app-shell.theme-light .settings-status-pill {
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  color: #047857;
+  font-weight: 800;
+}
+
+/* Light mode high-contrast buttons */
+.app-shell.theme-light .settings-btn-toggle {
+  background: #ffffff;
+  border: 1.5px solid #4f46e5;
+  color: #3730a3;
+  font-weight: 750;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.12);
+}
+
+.app-shell.theme-light .settings-btn-toggle:hover {
+  background: #4f46e5;
+  border-color: #4338ca;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.app-shell.theme-light .settings-btn-toggle:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+.app-shell.theme-light .settings-btn-toggle:active {
+  transform: translateY(0);
+}
+
+.app-shell.theme-light .settings-btn-danger {
+  background: #fef2f2;
+  border: 1.5px solid #f87171;
+  color: #dc2626;
+  font-weight: 750;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.1);
+}
+
+.app-shell.theme-light .settings-btn-danger:hover {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+
+.app-shell.theme-light .settings-btn-danger:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+.app-shell.theme-light .settings-btn-danger:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-page { padding: 20px 16px; }
+  .settings-info-grid { grid-template-columns: 1fr; }
+  .settings-info-card { border-right: 0; }
+  .settings-info-card:nth-last-child(-n+2) { border-bottom: 1px solid var(--dp-border); }
+  .settings-info-card:last-child { border-bottom: 0; }
+}
+
+@media (max-width: 500px) {
+  .settings-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .settings-btn-toggle,
+  .settings-btn-danger { width: 100%; justify-content: center; display: flex; }
+}
