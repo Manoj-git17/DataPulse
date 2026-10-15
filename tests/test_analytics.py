@@ -76,3 +76,16 @@ def test_full_dashboard_payload(db_engine):
     dashboard = get_full_analytics_dashboard(db_engine)
     required_keys = {"kpis", "monthly_trends", "regional_breakdown", "top_products", "top_customers", "payment_methods"}
     assert required_keys.issubset(dashboard.keys())
+
+
+def test_clean_row_converts_decimals():
+    from decimal import Decimal
+    from db.analytics import _clean_row
+
+    sample = {"val": Decimal("123.45"), "name": "Test", "count": 10}
+    cleaned = _clean_row(sample)
+    assert isinstance(cleaned["val"], float)
+    assert cleaned["val"] == 123.45
+    assert cleaned["name"] == "Test"
+    assert cleaned["count"] == 10
+

@@ -118,3 +118,11 @@ def test_cors_configuration_empty_values(monkeypatch):
 
     assert origins == ["*"]
     assert allow_creds is False
+
+
+def test_cors_configuration_trailing_slashes(monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "https://data-pulse-phi-six.vercel.app/, http://localhost:5173/")
+    origins, allow_creds = get_cors_configuration()
+
+    assert origins == ["https://data-pulse-phi-six.vercel.app", "http://localhost:5173"]
+    assert allow_creds is True

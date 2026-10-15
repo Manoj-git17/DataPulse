@@ -101,7 +101,7 @@ class DataPulseAIAssistant:
             limit = 3 if "3" in cleaned else 5
             data = get_top_products(self.engine, limit=limit)
             top_item = data[0] if data else {}
-            sql = f"""SELECT p.product_name, p.category, SUM(s.quantity) AS units, ROUND(SUM(s.net_amount), 2) AS revenue FROM fact_sales s JOIN dim_products p ON s.product_id = p.product_id WHERE s.order_status = 'Delivered' GROUP BY p.product_name, p.category ORDER BY revenue DESC LIMIT {limit};"""
+            sql = f"""SELECT p.product_name, p.category, SUM(s.quantity) AS units, ROUND(CAST(SUM(s.net_amount) AS NUMERIC), 2) AS revenue FROM fact_sales s JOIN dim_products p ON s.product_id = p.product_id WHERE s.order_status = 'Delivered' GROUP BY p.product_name, p.category ORDER BY revenue DESC LIMIT {limit};"""
             answer = f"The top performing product is '{top_item.get('product_name')}' with ₹{top_item.get('total_revenue', 0):,.2f} in delivered revenue across {top_item.get('units_sold', 0)} units."
             insights = f"Category '{top_item.get('category')}' drives the highest revenue share with a {top_item.get('profit_margin_pct')}% margin."
             return {
@@ -117,7 +117,7 @@ class DataPulseAIAssistant:
         if any(w in cleaned for w in REGIONAL_KEYWORDS):
             data = get_regional_breakdown(self.engine)
             top_reg = data[0] if data else {}
-            sql = """SELECT c.customer_region, COUNT(s.order_id) AS orders, ROUND(SUM(s.net_amount), 2) AS revenue, ROUND(SUM(s.estimated_profit), 2) AS profit FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status = 'Delivered' GROUP BY c.customer_region ORDER BY revenue DESC;"""
+            sql = """SELECT c.customer_region, COUNT(s.order_id) AS orders, ROUND(CAST(SUM(s.net_amount) AS NUMERIC), 2) AS revenue, ROUND(CAST(SUM(s.estimated_profit) AS NUMERIC), 2) AS profit FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status = 'Delivered' GROUP BY c.customer_region ORDER BY revenue DESC;"""
             answer = f"The '{top_reg.get('customer_region')}' region leads sales with ₹{top_reg.get('regional_revenue', 0):,.2f} in net revenue and {top_reg.get('order_count')} delivered orders."
             insights = f"Top regional margin is {top_reg.get('profit_margin_pct')}%, generating ₹{top_reg.get('regional_profit', 0):,.2f} in net profits."
             return {
@@ -133,7 +133,7 @@ class DataPulseAIAssistant:
         if any(w in cleaned for w in CUSTOMER_KEYWORDS):
             data = get_customer_clv(self.engine, limit=5)
             top_cust = data[0] if data else {}
-            sql = """SELECT c.customer_name, c.customer_region, COUNT(s.order_id) AS orders, ROUND(SUM(s.net_amount), 2) AS total_spend, RANK() OVER (ORDER BY SUM(s.net_amount) DESC) AS rank FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status != 'Cancelled' GROUP BY c.customer_id, c.customer_name ORDER BY total_spend DESC LIMIT 5;"""
+            sql = """SELECT c.customer_name, c.customer_region, COUNT(s.order_id) AS orders, ROUND(CAST(SUM(s.net_amount) AS NUMERIC), 2) AS total_spend, RANK() OVER (ORDER BY SUM(s.net_amount) DESC) AS rank FROM fact_sales s JOIN dim_customers c ON s.customer_id = c.customer_id WHERE s.order_status != 'Cancelled' GROUP BY c.customer_id, c.customer_name ORDER BY total_spend DESC LIMIT 5;"""
             answer = f"Our top customer is {top_cust.get('customer_name')} ({top_cust.get('customer_region')}) with total spend of ₹{top_cust.get('total_spend', 0):,.2f} across {top_cust.get('total_orders')} orders."
             insights = f"Average spend for top-tier customer is ₹{top_cust.get('avg_spend_per_order', 0):,.2f} per order."
             return {
@@ -149,7 +149,7 @@ class DataPulseAIAssistant:
         if any(w in cleaned for w in PAYMENT_KEYWORDS):
             data = get_payment_method_breakdown(self.engine)
             top_pm = data[0] if data else {}
-            sql = """SELECT payment_method, COUNT(order_id) AS transactions, ROUND(SUM(net_amount), 2) AS revenue, ROUND((COUNT(order_id) * 100.0 / (SELECT COUNT(*) FROM fact_sales)), 2) AS share_pct FROM fact_sales GROUP BY payment_method ORDER BY transactions DESC;"""
+            sql = """SELECT payment_method, COUNT(order_id) AS transactions, ROUND(CAST(SUM(net_amount) AS NUMERIC), 2) AS revenue, ROUND(CAST((COUNT(order_id) * 100.0 / (SELECT COUNT(*) FROM fact_sales)) AS NUMERIC), 2) AS share_pct FROM fact_sales GROUP BY payment_method ORDER BY transactions DESC;"""
             answer = f"The most preferred checkout method is {top_pm.get('payment_method')}, accounting for {top_pm.get('share_of_transactions_pct')}% of total transaction volume."
             insights = f"{top_pm.get('payment_method')} has a low cancellation rate of {top_pm.get('cancellation_rate_pct')}%, representing healthy checkout conversion."
             return {
@@ -164,7 +164,7 @@ class DataPulseAIAssistant:
         # 7. Monthly Trends & Growth
         if any(w in cleaned for w in TREND_KEYWORDS):
             data = get_monthly_trends(self.engine)
-            sql = """SELECT strftime('%Y-%m', order_date) AS month, COUNT(order_id) AS orders, ROUND(SUM(net_amount), 2) AS revenue, ROUND(SUM(SUM(net_amount)) OVER (ORDER BY strftime('%Y-%m', order_date)), 2) AS cumulative_revenue FROM fact_sales WHERE order_status != 'Cancelled' GROUP BY strftime('%Y-%m', order_date) ORDER BY month ASC;"""
+            sql = """SELECT strftime('%Y-%m', order_date) AS month, COUNT(order_id) AS orders, ROUND(CAST(SUM(net_amount) AS NUMERIC), 2) AS revenue, ROUND(CAST(SUM(SUM(net_amount)) OVER (ORDER BY strftime('%Y-%m', order_date)) AS NUMERIC), 2) AS cumulative_revenue FROM fact_sales WHERE order_status != 'Cancelled' GROUP BY strftime('%Y-%m', order_date) ORDER BY month ASC;"""
             latest = data[-1] if data else {}
             answer = f"Tracked {len(data)} calendar months. Cumulative business revenue reached ₹{latest.get('cumulative_revenue', 0):,.2f} by {latest.get('month')}."
             insights = "Time-series shows consistent monthly transaction activity across all fiscal periods."
@@ -180,7 +180,7 @@ class DataPulseAIAssistant:
         # 8. Legitimate Revenue / KPI / Business Health Query
         if any(w in cleaned for w in REVENUE_KEYWORDS):
             kpis = get_executive_kpis(self.engine)
-            sql = """SELECT COUNT(order_id) AS total_orders, ROUND(SUM(net_amount), 2) AS total_revenue, ROUND(SUM(estimated_profit), 2) AS total_profit, ROUND(AVG(net_amount), 2) AS aov, ROUND((SUM(estimated_profit)/SUM(net_amount))*100, 2) AS margin_pct FROM fact_sales;"""
+            sql = """SELECT COUNT(order_id) AS total_orders, ROUND(CAST(SUM(net_amount) AS NUMERIC), 2) AS total_revenue, ROUND(CAST(SUM(estimated_profit) AS NUMERIC), 2) AS total_profit, ROUND(CAST(AVG(net_amount) AS NUMERIC), 2) AS aov, ROUND(CAST((SUM(estimated_profit)/SUM(net_amount))*100 AS NUMERIC), 2) AS margin_pct FROM fact_sales;"""
             answer = f"Total net revenue is ₹{kpis.get('total_net_revenue', 0):,.2f} with total profit of ₹{kpis.get('total_profit', 0):,.2f} across {kpis.get('total_orders')} orders."
             insights = f"Business health: {kpis.get('overall_profit_margin_pct')}% overall profit margin and an Average Order Value (AOV) of ₹{kpis.get('average_order_value', 0):,.2f}."
             return {

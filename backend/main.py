@@ -62,7 +62,7 @@ def get_cors_configuration() -> Tuple[List[str], bool]:
     origins = (
         ["*"]
         if not raw or raw == "*"
-        else [origin.strip() for origin in raw.split(",") if origin.strip()]
+        else [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
     )
 
     if not origins:

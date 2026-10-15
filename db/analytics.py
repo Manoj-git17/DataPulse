@@ -4,6 +4,7 @@ Executes business intelligence SQL queries across PostgreSQL and SQLite.
 Provides structured metrics for CLI reporting, FastAPI, and React dashboards.
 """
 
+from decimal import Decimal
 from pathlib import Path
 import sys
 from typing import Dict, List, Any
@@ -20,6 +21,11 @@ def is_postgres(engine: Engine) -> bool:
     return engine.dialect.name == "postgresql"
 
 
+def _clean_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert Decimal values to float for unified cross-database JSON serialization."""
+    return {k: float(v) if isinstance(v, Decimal) else v for k, v in row.items()}
+
+
 def get_executive_kpis(engine: Engine | None = None) -> Dict[str, Any]:
     """Calculate core high-level KPIs across all transactions."""
     eng = engine or get_engine()
@@ -27,15 +33,15 @@ def get_executive_kpis(engine: Engine | None = None) -> Dict[str, Any]:
         SELECT 
             COUNT(order_id) AS total_orders,
             SUM(CASE WHEN order_status = 'Delivered' THEN 1 ELSE 0 END) AS delivered_orders,
-            ROUND(SUM(net_amount), 2) AS total_net_revenue,
-            ROUND(SUM(estimated_profit), 2) AS total_profit,
-            ROUND(AVG(net_amount), 2) AS average_order_value,
-            ROUND((SUM(estimated_profit) / NULLIF(SUM(net_amount), 0)) * 100, 2) AS overall_profit_margin_pct
+            ROUND(CAST(SUM(net_amount) AS NUMERIC), 2) AS total_net_revenue,
+            ROUND(CAST(SUM(estimated_profit) AS NUMERIC), 2) AS total_profit,
+            ROUND(CAST(AVG(net_amount) AS NUMERIC), 2) AS average_order_value,
+            ROUND(CAST((SUM(estimated_profit) / NULLIF(SUM(net_amount), 0)) * 100 AS NUMERIC), 2) AS overall_profit_margin_pct
         FROM fact_sales
     """)
     with eng.connect() as conn:
         row = conn.execute(sql).mappings().fetchone()
-        return dict(row) if row else {}
+        return _clean_row(dict(row)) if row else {}
 
 
 def get_monthly_trends(engine: Engine | None = None) -> List[Dict[str, Any]]:
@@ -48,16 +54,16 @@ def get_monthly_trends(engine: Engine | None = None) -> List[Dict[str, Any]]:
         SELECT 
             {date_expr} AS month,
             COUNT(order_id) AS orders_count,
-            ROUND(SUM(net_amount), 2) AS monthly_revenue,
-            ROUND(SUM(estimated_profit), 2) AS monthly_profit,
-            ROUND(SUM(SUM(net_amount)) OVER (ORDER BY {date_expr}), 2) AS cumulative_revenue
+            ROUND(CAST(SUM(net_amount) AS NUMERIC), 2) AS monthly_revenue,
+            ROUND(CAST(SUM(estimated_profit) AS NUMERIC), 2) AS monthly_profit,
+            ROUND(CAST(SUM(SUM(net_amount)) OVER (ORDER BY {date_expr}) AS NUMERIC), 2) AS cumulative_revenue
         FROM fact_sales
         WHERE order_status != 'Cancelled'
         GROUP BY {date_expr}
         ORDER BY month ASC
     """)
     with eng.connect() as conn:
-        return [dict(row) for row in conn.execute(sql).mappings().fetchall()]
+        return [_clean_row(dict(row)) for row in conn.execute(sql).mappings().fetchall()]
 
 
 def get_regional_breakdown(engine: Engine | None = None) -> List[Dict[str, Any]]:
@@ -67,10 +73,10 @@ def get_regional_breakdown(engine: Engine | None = None) -> List[Dict[str, Any]]
         SELECT 
             c.customer_region,
             COUNT(s.order_id) AS order_count,
-            ROUND(SUM(s.net_amount), 2) AS regional_revenue,
-            ROUND(SUM(s.estimated_profit), 2) AS regional_profit,
-            ROUND(AVG(s.net_amount), 2) AS avg_order_value,
-            ROUND((SUM(s.estimated_profit) / NULLIF(SUM(s.net_amount), 0)) * 100, 2) AS profit_margin_pct
+            ROUND(CAST(SUM(s.net_amount) AS NUMERIC), 2) AS regional_revenue,
+            ROUND(CAST(SUM(s.estimated_profit) AS NUMERIC), 2) AS regional_profit,
+            ROUND(CAST(AVG(s.net_amount) AS NUMERIC), 2) AS avg_order_value,
+            ROUND(CAST((SUM(s.estimated_profit) / NULLIF(SUM(s.net_amount), 0)) * 100 AS NUMERIC), 2) AS profit_margin_pct
         FROM fact_sales s
         JOIN dim_customers c ON s.customer_id = c.customer_id
         WHERE s.order_status = 'Delivered'
@@ -78,7 +84,7 @@ def get_regional_breakdown(engine: Engine | None = None) -> List[Dict[str, Any]]
         ORDER BY regional_revenue DESC
     """)
     with eng.connect() as conn:
-        return [dict(row) for row in conn.execute(sql).mappings().fetchall()]
+        return [_clean_row(dict(row)) for row in conn.execute(sql).mappings().fetchall()]
 
 
 def get_top_products(engine: Engine | None = None, limit: int = 5) -> List[Dict[str, Any]]:
@@ -90,9 +96,9 @@ def get_top_products(engine: Engine | None = None, limit: int = 5) -> List[Dict[
             p.product_name,
             p.category,
             SUM(s.quantity) AS units_sold,
-            ROUND(SUM(s.net_amount), 2) AS total_revenue,
-            ROUND(SUM(s.estimated_profit), 2) AS total_profit,
-            ROUND((SUM(s.estimated_profit) / NULLIF(SUM(s.net_amount), 0)) * 100, 2) AS profit_margin_pct
+            ROUND(CAST(SUM(s.net_amount) AS NUMERIC), 2) AS total_revenue,
+            ROUND(CAST(SUM(s.estimated_profit) AS NUMERIC), 2) AS total_profit,
+            ROUND(CAST((SUM(s.estimated_profit) / NULLIF(SUM(s.net_amount), 0)) * 100 AS NUMERIC), 2) AS profit_margin_pct
         FROM fact_sales s
         JOIN dim_products p ON s.product_id = p.product_id
         WHERE s.order_status = 'Delivered'
@@ -101,7 +107,7 @@ def get_top_products(engine: Engine | None = None, limit: int = 5) -> List[Dict[
         LIMIT {limit}
     """)
     with eng.connect() as conn:
-        return [dict(row) for row in conn.execute(sql).mappings().fetchall()]
+        return [_clean_row(dict(row)) for row in conn.execute(sql).mappings().fetchall()]
 
 
 def get_customer_clv(engine: Engine | None = None, limit: int = 10) -> List[Dict[str, Any]]:
@@ -113,8 +119,8 @@ def get_customer_clv(engine: Engine | None = None, limit: int = 10) -> List[Dict
             c.customer_name,
             c.customer_region,
             COUNT(s.order_id) AS total_orders,
-            ROUND(SUM(s.net_amount), 2) AS total_spend,
-            ROUND(AVG(s.net_amount), 2) AS avg_spend_per_order,
+            ROUND(CAST(SUM(s.net_amount) AS NUMERIC), 2) AS total_spend,
+            ROUND(CAST(AVG(s.net_amount) AS NUMERIC), 2) AS avg_spend_per_order,
             RANK() OVER (ORDER BY SUM(s.net_amount) DESC) AS customer_rank
         FROM fact_sales s
         JOIN dim_customers c ON s.customer_id = c.customer_id
@@ -124,7 +130,7 @@ def get_customer_clv(engine: Engine | None = None, limit: int = 10) -> List[Dict
         LIMIT {limit}
     """)
     with eng.connect() as conn:
-        return [dict(row) for row in conn.execute(sql).mappings().fetchall()]
+        return [_clean_row(dict(row)) for row in conn.execute(sql).mappings().fetchall()]
 
 
 def get_payment_method_breakdown(engine: Engine | None = None) -> List[Dict[str, Any]]:
@@ -134,15 +140,15 @@ def get_payment_method_breakdown(engine: Engine | None = None) -> List[Dict[str,
         SELECT 
             payment_method,
             COUNT(order_id) AS total_transactions,
-            ROUND(SUM(net_amount), 2) AS total_revenue,
-            ROUND((COUNT(order_id) * 100.0 / (SELECT COUNT(*) FROM fact_sales)), 2) AS share_of_transactions_pct,
-            ROUND((SUM(CASE WHEN order_status = 'Cancelled' THEN 1 ELSE 0 END) * 100.0 / COUNT(order_id)), 2) AS cancellation_rate_pct
+            ROUND(CAST(SUM(net_amount) AS NUMERIC), 2) AS total_revenue,
+            ROUND(CAST((COUNT(order_id) * 100.0 / (SELECT COUNT(*) FROM fact_sales)) AS NUMERIC), 2) AS share_of_transactions_pct,
+            ROUND(CAST((SUM(CASE WHEN order_status = 'Cancelled' THEN 1 ELSE 0 END) * 100.0 / COUNT(order_id)) AS NUMERIC), 2) AS cancellation_rate_pct
         FROM fact_sales
         GROUP BY payment_method
         ORDER BY total_transactions DESC
     """)
     with eng.connect() as conn:
-        return [dict(row) for row in conn.execute(sql).mappings().fetchall()]
+        return [_clean_row(dict(row)) for row in conn.execute(sql).mappings().fetchall()]
 
 
 def get_full_analytics_dashboard(engine: Engine | None = None) -> Dict[str, Any]:
