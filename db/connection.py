@@ -18,12 +18,16 @@ DEFAULT_DB_PATH = Path("data/datapulse.db")
 
 def normalize_database_url(url: str) -> str:
     """
-    Normalize legacy database URL schemes (e.g. postgres:// to postgresql://)
-    as required by SQLAlchemy 1.4+ and 2.0+.
-    Preserves sqlite:/// and already valid postgresql:// URLs.
+    Normalize database URL schemes to explicitly use the psycopg2 driver
+    (postgresql+psycopg2://) for PostgreSQL databases.
+    Preserves sqlite:/// and already valid driver URLs.
     """
-    if url and url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql://", 1)
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+psycopg2://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg2://", 1)
     return url
 
 
@@ -46,7 +50,7 @@ def get_database_url() -> str:
     db_name = os.getenv("DB_NAME")
 
     if db_user and db_pass and db_host and db_name and db_pass != "your_password_here":
-        return f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+        return f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
 
     # Default zero-setup local SQLite path
     DEFAULT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)

@@ -115,26 +115,35 @@ def read_root() -> Dict[str, Any]:
 @app.get("/api/health", tags=["Monitoring"])
 def health_check() -> Dict[str, Any]:
     """Health check endpoint verifying database connectivity."""
-    engine = get_engine()
+    db_status = "unknown"
+    dialect_name = "unknown"
+    url_str = "unknown"
+    is_connected = False
 
     try:
         from sqlalchemy import text
+
+        engine = get_engine()
+        dialect_name = engine.dialect.name
+        url_str = engine.url.render_as_string(hide_password=True)
 
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
 
         db_status = "connected"
+        is_connected = True
 
     except Exception as e:
         db_status = f"error: {str(e)}"
+        is_connected = False
 
     return {
-        "status": "healthy",
+        "status": "healthy" if is_connected else "degraded",
         "timestamp": datetime.now().isoformat(),
         "database": {
             "status": db_status,
-            "dialect": engine.dialect.name,
-            "url": str(engine.url),
+            "dialect": dialect_name,
+            "url": url_str,
         },
     }
 

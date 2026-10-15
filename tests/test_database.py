@@ -68,11 +68,17 @@ def test_load_clean_data_pipeline(tmp_path):
 def test_normalize_database_url_legacy_postgres():
     legacy_url = "postgres://user:pass@neon.tech:5432/datapulse?sslmode=require"
     normalized = normalize_database_url(legacy_url)
-    assert normalized == "postgresql://user:pass@neon.tech:5432/datapulse?sslmode=require"
+    assert normalized == "postgresql+psycopg2://user:pass@neon.tech:5432/datapulse?sslmode=require"
+
+
+def test_normalize_database_url_standard_postgres():
+    pg_url = "postgresql://user:pass@neon.tech:5432/datapulse?sslmode=require"
+    normalized = normalize_database_url(pg_url)
+    assert normalized == "postgresql+psycopg2://user:pass@neon.tech:5432/datapulse?sslmode=require"
 
 
 def test_normalize_database_url_preserves_valid_urls():
-    pg_url = "postgresql://user:pass@localhost:5432/datapulse"
+    pg_url = "postgresql+psycopg2://user:pass@localhost:5432/datapulse"
     assert normalize_database_url(pg_url) == pg_url
 
     sqlite_url = "sqlite:///data/datapulse.db"
@@ -82,7 +88,7 @@ def test_normalize_database_url_preserves_valid_urls():
 def test_get_database_url_normalizes_env_legacy_url(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgres://neon_user:neon_pass@ep-cool.neon.tech/neondb")
     url = get_database_url()
-    assert url == "postgresql://neon_user:neon_pass@ep-cool.neon.tech/neondb"
+    assert url == "postgresql+psycopg2://neon_user:neon_pass@ep-cool.neon.tech/neondb"
 
 
 def test_postgresql_url_parsing_offline():
@@ -90,7 +96,8 @@ def test_postgresql_url_parsing_offline():
     from sqlalchemy.engine import make_url
 
     parsed = make_url(normalize_database_url("postgres://app_user:secret_pwd@db.neon.tech:5432/datapulse_prod"))
-    assert parsed.drivername == "postgresql"
+    assert parsed.get_backend_name() == "postgresql"
+    assert parsed.get_driver_name() == "psycopg2"
     assert parsed.username == "app_user"
     assert parsed.password == "secret_pwd"
     assert parsed.host == "db.neon.tech"
