@@ -88,6 +88,15 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class LoginResponse(BaseModel):
+    """Output returned upon successful login."""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: UserResponse
+
+
 def create_access_token(user_id: int) -> str:
     """Create a signed, expiring access token."""
     now = datetime.now(timezone.utc)
@@ -179,7 +188,7 @@ def register(payload: RegisterRequest, db: AuthDB):
     return user
 
 
-@router.post("/login")
+@router.post("/login", response_model=LoginResponse)
 def login(payload: LoginRequest, db: AuthDB):
     """Verify credentials and return an access token."""
 
@@ -202,6 +211,7 @@ def login(payload: LoginRequest, db: AuthDB):
         "access_token": create_access_token(user.id),
         "token_type": "bearer",
         "expires_in": ACCESS_TOKEN_MINUTES * 60,
+        "user": user,
     }
 
 

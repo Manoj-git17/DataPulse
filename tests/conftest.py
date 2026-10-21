@@ -15,7 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
-from db.connection import get_engine, init_db
+from db.connection import get_engine, init_db, reset_engine_cache
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -44,8 +44,9 @@ def isolated_test_database(tmp_path_factory: pytest.TempPathFactory) -> Generato
 
     yield test_db_path
 
-    # Teardown: close engine connections and restore environment
+    # Teardown: close engine connections, clear cache, and restore environment
     engine.dispose()
+    reset_engine_cache()
     if old_db_url is not None:
         os.environ["DATABASE_URL"] = old_db_url
     else:

@@ -126,3 +126,113 @@ def test_cors_configuration_trailing_slashes(monkeypatch):
 
     assert origins == ["https://data-pulse-phi-six.vercel.app", "http://localhost:5173"]
     assert allow_creds is True
+
+
+def test_login_success_returns_token_and_user(client):
+    """Verify that login returns access token, expiration, and user profile."""
+    credentials = {
+        "email": "login_test_user@example.com",
+        "password": "LoginTestPass123!",
+    }
+    client.post(
+        "/api/auth/register",
+        json={
+            "email": credentials["email"],
+            "full_name": "Login Test User",
+            "password": credentials["password"],
+        },
+    )
+
+    response = client.post("/api/auth/login", json=credentials)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["expires_in"] > 0
+    assert "user" in data
+    assert data["user"]["email"] == credentials["email"]
+    assert data["user"]["full_name"] == "Login Test User"
+    assert data["user"]["is_active"] is True
+    assert "id" in data["user"]
+
+
+def test_login_invalid_password_returns_401(client):
+    """Verify that an incorrect password is securely rejected with 401."""
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "test_runner@example.com",
+            "password": "WrongPassword123!",
+        },
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Incorrect email or password."
+
+
+def test_login_nonexistent_user_returns_401(client):
+    """Verify that a non-existent email is rejected with 401."""
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "nobody_exists_here@example.com",
+            "password": "AnyPassword123!",
+        },
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Incorrect email or password."
+
+
+def test_auth_me_endpoint(client, auth_headers):
+    """Verify /api/auth/me returns the profile for a valid token."""
+    response = client.get("/api/auth/me", headers=auth_headers)
+    assert response.status_code == 200
+    user_info = response.json()
+    assert user_info["email"] == "test_runner@example.com"
+    assert user_info["full_name"] == "Test Runner"
+    assert user_info["is_active"] is True
+
+
+def test_connection_pooling_reuses_engine():
+    """Verify get_engine and get_session_factory reuse cached singleton instances."""
+    from db.connection import get_engine, get_session_factory
+
+    engine_a = get_engine()
+    engine_b = get_engine()
+    assert engine_a is engine_b, "get_engine should return cached singleton to reuse connection pools"
+
+    factory_a = get_session_factory(engine_a)
+    factory_b = get_session_factory(engine_a)
+    assert factory_a is factory_b, "get_session_factory should reuse cached sessionmaker"
+
+
+def test_login_inactive_user_returns_401(client):
+    """Verify that an inactive user cannot log in and returns 401."""
+    from db.connection import get_session
+    from db.models import User
+
+    credentials = {
+        "email": "inactive_user@example.com",
+        "password": "InactivePassword123!",
+    }
+    client.post(
+        "/api/auth/register",
+        json={
+            "email": credentials["email"],
+            "full_name": "Inactive User",
+            "password": credentials["password"],
+        },
+    )
+
+    # Deactivate the user in the database
+    with get_session() as session:
+        user = session.query(User).filter(User.email == credentials["email"]).first()
+        assert user is not None
+        user.is_active = False
+        session.commit()
+
+    response = client.post("/api/auth/login", json=credentials)
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Incorrect email or password."
+
+

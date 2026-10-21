@@ -98,23 +98,33 @@ export default function App() {
   };
 
 
-  const handleAuthenticated = async (token) => {
-    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  const handleAuthenticated = async (token, prefetchedUser = null) => {
+    let userData = prefetchedUser;
 
-    if (!response.ok) {
-      sessionStorage.removeItem('datapulse_access_token');
-      throw new Error(
-        response.status === 401
-          ? 'Your session is invalid or expired. Please sign in again.'
-          : 'Could not verify your account. Please try again.'
-      );
+    if (!userData) {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        sessionStorage.removeItem('datapulse_access_token');
+        throw new Error(
+          response.status === 401
+            ? 'Your session is invalid or expired. Please sign in again.'
+            : 'Could not verify your account. Please try again.'
+        );
+      }
+
+      userData = await response.json();
     }
 
-    const userData = await response.json();
+    if (!token || !userData) {
+      sessionStorage.removeItem('datapulse_access_token');
+      throw new Error('Could not verify your account. Please try again.');
+    }
+
     setUser(userData);
     setAccessToken(token);
     setAuthError('');
@@ -162,6 +172,8 @@ export default function App() {
           setAccessToken(null);
           setAuthChecking(false);
         }
+        // Non-blocking pre-warm to wake up Render & Neon while the user browses
+        fetch(`${API_BASE_URL}/api/health`).catch(() => {});
         return;
       }
 

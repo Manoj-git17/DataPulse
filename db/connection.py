@@ -5,6 +5,7 @@ Cost: ₹0 (Embedded SQLite / Native PostgreSQL).
 """
 
 import os
+import threading
 from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Engine
@@ -57,30 +58,74 @@ def get_database_url() -> str:
     return f"sqlite:///{DEFAULT_DB_PATH.resolve()}"
 
 
+_engines: dict[str, Engine] = {}
+_session_factories: dict[int, sessionmaker] = {}
+_engine_lock = threading.Lock()
+
+
 def get_engine(database_url: str | None = None) -> Engine:
     """
-    Create a SQLAlchemy Engine with optimal pooling settings.
+    Get or create a cached SQLAlchemy Engine with optimal pooling settings.
+    Reuses existing connection pools across requests to eliminate repeated
+    TCP and TLS handshake overhead. Thread-safe for concurrent requests.
     """
     url = normalize_database_url(database_url or get_database_url())
 
-    # SQLite-specific connection arguments (foreign keys enable)
-    if url.startswith("sqlite"):
-        return create_engine(url, connect_args={"check_same_thread": False})
+    if url not in _engines:
+        with _engine_lock:
+            if url not in _engines:
+                # SQLite-specific connection arguments (foreign keys enable)
+                if url.startswith("sqlite"):
+                    _engines[url] = create_engine(
+                        url,
+                        connect_args={"check_same_thread": False},
+                    )
+                else:
+                    # PostgreSQL / Neon pooling settings:
+                    # - pool_size: persistent connections in the pool
+                    # - max_overflow: maximum overflow connections for peak traffic
+                    # - pool_recycle: recycle before Neon's 300s idle timeout
+                    # - pool_pre_ping: check connection health before checkout
+                    _engines[url] = create_engine(
+                        url,
+                        pool_size=5,
+                        max_overflow=10,
+                        pool_recycle=280,
+                        pool_pre_ping=True,
+                    )
 
-    # PostgreSQL / Standard RDBMS
-    return create_engine(url, pool_pre_ping=True)
+    return _engines[url]
 
 
 def get_session_factory(engine: Engine | None = None) -> sessionmaker:
     """Return a sessionmaker bound to the given or default engine."""
     eng = engine or get_engine()
-    return sessionmaker(autocommit=False, autoflush=False, bind=eng)
+    eng_id = id(eng)
+    if eng_id not in _session_factories:
+        with _engine_lock:
+            if eng_id not in _session_factories:
+                _session_factories[eng_id] = sessionmaker(
+                    autocommit=False, autoflush=False, bind=eng
+                )
+    return _session_factories[eng_id]
 
 
 def get_session(engine: Engine | None = None) -> Session:
     """Return a new database session."""
     factory = get_session_factory(engine)
     return factory()
+
+
+def reset_engine_cache() -> None:
+    """Dispose and clear cached engines and factories. Used for test teardowns."""
+    with _engine_lock:
+        for engine in _engines.values():
+            try:
+                engine.dispose()
+            except Exception:
+                pass
+        _engines.clear()
+        _session_factories.clear()
 
 
 def init_db(engine: Engine | None = None) -> None:

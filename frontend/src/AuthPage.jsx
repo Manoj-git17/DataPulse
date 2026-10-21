@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "./AuthPage.css";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -13,11 +13,16 @@ export default function AuthPage({ onAuthenticated, onBack, theme }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const isSubmitting = useRef(false);
 
   const isRegister = mode === "register";
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (isSubmitting.current || loading) {
+      return;
+    }
 
     setError("");
     setSuccess("");
@@ -36,6 +41,7 @@ export default function AuthPage({ onAuthenticated, onBack, theme }) {
       return;
     }
 
+    isSubmitting.current = true;
     setLoading(true);
 
     try {
@@ -89,7 +95,7 @@ export default function AuthPage({ onAuthenticated, onBack, theme }) {
       sessionStorage.setItem("datapulse_access_token", result.access_token);
 
       try {
-        await onAuthenticated(result.access_token);
+        await onAuthenticated(result.access_token, result.user);
       } catch (authError) {
         sessionStorage.removeItem("datapulse_access_token");
         throw authError;
@@ -101,6 +107,7 @@ export default function AuthPage({ onAuthenticated, onBack, theme }) {
           : err.message || "Something went wrong."
       );
     } finally {
+      isSubmitting.current = false;
       setLoading(false);
     }
   }
